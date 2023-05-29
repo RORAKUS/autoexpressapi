@@ -1,0 +1,11 @@
+# IDE files
+.idea
+
+# Project directories
+node_modules
+out
+test
+
+# Project files
+.env
+package-lock.json
