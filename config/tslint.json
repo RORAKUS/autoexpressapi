@@ -9,6 +9,7 @@
     "no-var-keyword": true,
     "no-console": false,
     "max-classes-per-file": false,
-    "no-empty": false
+    "no-empty": false,
+    "no-angle-bracket-type-assertion": false
   }
 }

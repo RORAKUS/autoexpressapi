@@ -310,7 +310,7 @@ export default class AEA {
             addFunction(methodName, url, script[methodName]);
         });
     }
-    private registerAll(url: string, script: Route | RequestHandler, path: string) {
+    private registerAll(url: string, script: Route | RequestHandler, filePath: string) {
         d("Registering all handler...");
 
         const addAllHandlerFn: AddFunction = (method, _url, scriptMethod) => {
@@ -333,8 +333,8 @@ export default class AEA {
         if (typeof script === "function") {
             d("- is a function, registering for all...");
             addAllHandlerFn("all", `${url}*`, script);
-            this.addRoute(`${url}$all`, path);
-            logger.log(`${url}$all --> ${path}`);
+            this.addRoute(`${url}$all`, filePath);
+            logger.log(`${url}$all --> ${filePath}`);
             return;
         }
         if (typeof script !== "object") {
@@ -343,14 +343,12 @@ export default class AEA {
         }
         d("- is an object, registering...");
         // middleware
-        if (script.middleware)
-            this.registerMiddleware(`${url}*`, script.middleware, addAllHandlerFn);
+        if (script.middleware) this.registerMiddleware(`${url}*`, script.middleware, addAllHandlerFn);
         // methods
         this.registerMethods(`${url}*`, script, addAllHandlerFn);
         // end middleware
-        if (script.endMiddleware)
-            this.registerMiddleware(`${url}*`, script.endMiddleware, addAllHandlerFn);
+        if (script.endMiddleware) this.registerMiddleware(`${url}*`, script.endMiddleware, addAllHandlerFn);
 
-        this.addRoute(`${url}$all`, path);
+        this.addRoute(`${url}$all`, filePath);
     }
 }
