@@ -41,10 +41,26 @@ export let EXPRESS_METHODS = [
     "unsubscribe"
 ];
 
+/**
+ * The config object class. It contains all possible settings for AEA.
+ */
 export class Config {
+    /**
+     * Path to the directory, that will be mapped. It's either a **absolute** path or **relative** path.
+     * If it's relative, it will be joined with **`process.cwd()`** <br>
+     * **default** - `"routes"`
+     */
     routesDir: string = "routes";
 
+    /**
+     * The filename (**without extension**) of the all route.
+     * All non-handled requests will be directed into that file.<br>
+     * **default** - `"all"`
+     */
     allRouteFilename: string = "all";
+    /**
+     *
+     */
     rootRouteFilename: string = "index";
 
     ignorePrefix: string = "$";
@@ -177,21 +193,7 @@ export default class AEA {
         });
         // load all:
         if (!allHandler) return;
-        d("Registering all handler...");
-        if (allHandler.constructor.name === "AsyncFunction") {
-            d("- The method is async, adding using await...");
-            this.server.all(`${baseUrl}*`, async (req, res, next) => {
-                if (!res.headersSent) await allHandler!!(req, res, next);
-                else next();
-            });
-        } else
-            this.server.all(`${baseUrl}*`, (req, res, next) => {
-                if (!res.headersSent) allHandler!!(req, res, next);
-                else next();
-            });
-
-        this.addRoute(`${baseUrl}$all`, allFilePath!!);
-        logger.log(`${baseUrl}$all --> ${allFilePath!!}`);
+        this.registerAll(baseUrl, allHandler!!, allFilePath!!);
     }
     private computedRoute(filePath: string, baseUrl: string) {
         d(`Mapping computed route ${baseUrl}* with ${filePath}:`);
@@ -307,5 +309,48 @@ export default class AEA {
             // @ts-ignore
             addFunction(methodName, url, script[methodName]);
         });
+    }
+    private registerAll(url: string, script: Route | RequestHandler, path: string) {
+        d("Registering all handler...");
+
+        const addAllHandlerFn: AddFunction = (method, _url, scriptMethod) => {
+            if (scriptMethod.constructor.name === "AsyncFunction") {
+                d("--- is async, adding using await...");
+                // @ts-ignore
+                this.server[method](`${_url}*`, async (req, res, next) => {
+                    if (!res.headersSent) await (<RequestHandler>scriptMethod)(req, res, next);
+                    else next();
+                });
+            } else {
+                // @ts-ignore
+                this.server[method](`${_url}*`, (req, res, next) => {
+                    if (!res.headersSent) (<RequestHandler>scriptMethod)(req, res, next);
+                    else next();
+                });
+            }
+        };
+
+        if (typeof script === "function") {
+            d("- is a function, registering for all...");
+            addAllHandlerFn("all", `${url}*`, script);
+            this.addRoute(`${url}$all`, path);
+            logger.log(`${url}$all --> ${path}`);
+            return;
+        }
+        if (typeof script !== "object") {
+            logger.warn(`All handler at ${url} is neither a function, nor an object. Returning...`);
+            return;
+        }
+        d("- is an object, registering...");
+        // middleware
+        if (script.middleware)
+            this.registerMiddleware(`${url}*`, script.middleware, addAllHandlerFn);
+        // methods
+        this.registerMethods(`${url}*`, script, addAllHandlerFn);
+        // end middleware
+        if (script.endMiddleware)
+            this.registerMiddleware(`${url}*`, script.endMiddleware, addAllHandlerFn);
+
+        this.addRoute(`${url}$all`, path);
     }
 }

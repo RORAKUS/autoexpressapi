@@ -5,8 +5,8 @@
 node_modules
 out
 test
+wiki
 
 # Project files
 .env
 package-lock.json
-WIKI.md
